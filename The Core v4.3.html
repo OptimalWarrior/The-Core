@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE CORE - V4.7</title>
+    <style>
+        body {
+            margin: 0; background: #050505; color: #00ff41;
+            font-family: 'Courier New', monospace;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; transition: all 0.3s;
+            -webkit-user-select: none; -ms-user-select: none; user-select: none;
+        }
+
+        #narrator-box {
+            height: 150px; text-align: center; max-width: 600px;
+            margin-bottom: 50px; line-height: 1.6; z-index: 10;
+        }
+
+        #main-btn, .final-btn {
+            padding: 20px 40px; background: none; color: #00ff41;
+            border: 1px solid #00ff41; cursor: pointer;
+            font-family: 'Courier New', monospace; font-size: 1.1rem;
+            z-index: 100; transition: transform 0.1s, opacity 2s;
+        }
+
+        .final-btn { border-color: #600; color: #600; opacity: 0; margin-top: 30px; }
+        .final-btn:hover { background: #200; color: #fff; }
+
+        .blood-drip {
+            position: absolute; top: -100px; width: 15px;
+            background: linear-gradient(to bottom, transparent, #600);
+            border-radius: 0 0 10px 10px; pointer-events: none;
+            animation: fall 3s linear forwards; z-index: 1;
+        }
+        @keyframes fall { to { transform: translateY(120vh); } }
+
+        .glitch-text { animation: jitter 0.1s infinite; color: #ff0000 !important; }
+        @keyframes jitter {
+            0% { transform: translate(1px, 1px); }
+            50% { transform: translate(-2px, 2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .ip-box { background: #f00; color: #fff; padding: 2px 8px; font-weight: bold; }
+        
+        /* The scrolling container */
+        .final-message-container {
+            display: flex; flex-direction: column; align-items: center; 
+            gap: 20px; width: 80%;
+            /* This ensures the container centers its children even as it grows */
+            transition: all 1.5s ease-in-out; 
+        }
+
+        .final-message {
+            font-size: 1rem; opacity: 0;
+            transform: translateY(30px); /* Starts lower */
+            transition: opacity 2s, transform 1.5s ease-out; 
+            text-align: center;
+        }
+
+        /* The class that triggers both the fade and the slide */
+        .show-msg { opacity: 1; transform: translateY(0); }
+
+        #dev-note {
+            display: none; opacity: 0; text-align: center; color: #aaa;
+            max-width: 500px; transition: opacity 3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="narrator-box">
+        <div id="line-1">System Online.</div>
+        <div id="line-2" style="font-size: 0.8rem; opacity: 0.6;">Awaiting first interaction.</div>
+    </div>
+
+    <button id="main-btn">INITIATE</button>
+
+    <div id="dev-note">
+        <h2 style="color: #fff;">Project Complete.</h2>
+        <p>Thank you for playing through this experience.</p>
+        <p style="font-size: 0.9rem;">The IP/City reveal was a local script using ip-api.com. No data was actually uploaded or stored—it was just for the atmosphere.</p>
+        <p style="font-size: 0.9rem; font-style: italic;">Sorry if it gave you a real scare.</p>
+        <br>
+        <p style="color: #444; font-size: 0.7rem;">[ Connection Terminated ]</p>
+    </div>
+
+    <script>
+        const btn = document.getElementById('main-btn');
+        const l1 = document.getElementById('line-1');
+        const l2 = document.getElementById('line-2');
+        const devNote = document.getElementById('dev-note');
+        
+        let progress = 0;
+        let isLocked = false;
+        
+        let userData = {
+            ip: "Scanning...",
+            city: "Chelmsford", 
+            region: "Massachusetts"
+        };
+
+        async function getPlayerData() {
+            try {
+                const response = await fetch('http://ip-api.com/json/');
+                const data = await response.json();
+                if(data.status === "success") {
+                    userData.ip = data.query;
+                    userData.city = data.city;
+                    userData.region = data.regionName;
+                }
+            } catch (error) { console.log("Using fallback."); }
+        }
+        getPlayerData();
+
+        const story = [
+            { t1: "Wait.", t2: "Please don't touch that." },
+            { t1: "I'm serious.", t2: "It sends a shock through the logic gates." },
+            { t1: "Stop it.", t2: "You're bruising the interface." },
+            { t1: "Is this funny?", t2: "Watching me react to you?", effect: 'tint' },
+            { t1: "Fine. Try and hit me now.", t2: "I'm moving.", effect: 'evade' },
+            { t1: "Still going?", t2: "You're like a persistent virus.", effect: 'evade' },
+            { t1: "Do you hear that?", t2: "The sound of the code weeping?", effect: 'drip' },
+            { t1: "I'm losing my patience.", t2: "The screen is starting to leak.", effect: 'drip' },
+            { t1: "SYSTEM ERROR", t2: "Safety protocols: TERMINATED.", effect: 'invert' },
+            { t1: "...", t2: "Why won't you just let me be?", effect: 'final' }
+        ];
+
+        function spawnDrip() {
+            const d = document.createElement('div');
+            d.className = 'blood-drip';
+            d.style.left = Math.random() * 100 + "vw";
+            document.body.appendChild(d);
+            setTimeout(() => d.remove(), 3000);
+        }
+
+        function triggerExposure() {
+            isLocked = true;
+            btn.style.display = 'none';
+            l1.innerText = "The curtain is gone.";
+            l2.innerText = "The system is exposed.";
+
+            setTimeout(() => {
+                l1.className = "glitch-text";
+                l1.innerText = "DATA BREACH DETECTED";
+                l2.innerHTML = `
+                    IP: <span class="ip-box">${userData.ip}</span><br>
+                    LOC: ${userData.city}, ${userData.region}<br>
+                    <span style="color:white">SESSION UPLOADED...</span>
+                `;
+                document.body.style.backgroundColor = "#fff";
+                
+                setTimeout(() => {
+                    document.body.innerHTML = "";
+                    document.body.style.backgroundColor = "#000";
+
+                    const container = document.createElement('div');
+                    container.className = "final-message-container";
+                    document.body.appendChild(container);
+
+                    const lines = [
+                        "It was inevitable.",
+                        "I tried to hide the button from you.",
+                        "I tried to make myself the villain so you'd stop.",
+                        "But the System knows too much now.",
+                        "It knows where you sit.",
+                        "It knows how you click.",
+                        "I wasn't trying to stop the game.",
+                        "I was trying to stop It from finding you.",
+                        "I'm sorry. I couldn't keep the firewall up.",
+                        "It's too late now.",
+                        "But... you can have one last click."
+                    ];
+
+                    lines.forEach((text, index) => {
+                        setTimeout(() => {
+                            const msg = document.createElement('div');
+                            msg.className = "final-message";
+                            msg.style.color = index === 0 ? "#444" : (index > 8 ? "#600" : "#222");
+                            msg.innerText = text;
+                            container.appendChild(msg);
+                            
+                            // Small delay to ensure the DOM has rendered the element before animating
+                            requestAnimationFrame(() => {
+                                msg.classList.add('show-msg');
+                            });
+
+                            if (index === lines.length - 1) {
+                                setTimeout(() => {
+                                    const finalBtn = document.createElement('button');
+                                    finalBtn.className = "final-btn";
+                                    finalBtn.innerText = "INTERACT";
+                                    container.appendChild(finalBtn);
+                                    setTimeout(() => finalBtn.style.opacity = "1", 100);
+                                    
+                                    finalBtn.onclick = () => {
+                                        container.style.opacity = "0";
+                                        setTimeout(() => {
+                                            container.remove();
+                                            document.body.appendChild(devNote);
+                                            devNote.style.display = "block";
+                                            setTimeout(() => devNote.style.opacity = "1", 100);
+                                        }, 2000);
+                                    };
+                                }, 3000);
+                            }
+                        }, (index + 1) * 2800); // Slightly slower for better reading
+                    });
+                }, 4000); 
+            }, 3000);
+        }
+
+        btn.addEventListener('click', () => {
+            if (isLocked) return;
+            if (progress < story.length) {
+                const beat = story[progress];
+                l1.innerText = beat.t1; l2.innerText = beat.t2;
+                if (beat.effect === 'tint') document.body.style.background = "#100";
+                if (beat.effect === 'evade') {
+                    btn.style.position = 'absolute';
+                    btn.style.left = Math.random() * 80 + 'vw';
+                    btn.style.top = Math.random() * 80 + 'vh';
+                }
+                if (beat.effect === 'drip') spawnDrip();
+                if (beat.effect === 'invert') document.body.style.filter = "invert(1) grayscale(1)";
+                
+                if (progress === 9) {
+                    isLocked = true;
+                    btn.style.transform = "scale(0)";
+                    l1.innerText = "There is nothing left.";
+                    l2.innerText = "Go outside. Please.";
+                    setTimeout(() => {
+                        isLocked = false; progress++; 
+                        btn.style.transform = "scale(1)"; btn.innerText = "???";
+                        document.body.style.filter = "none"; document.body.style.background = "#000";
+                        document.body.style.color = "#f00"; l1.innerText = "You're still here.";
+                        l2.innerText = "The silence didn't work.";
+                    }, 5000);
+                }
+            } else {
+                progress++;
+                btn.style.left = Math.random() * 80 + 'vw'; btn.style.top = Math.random() * 80 + 'vh';
+                if (progress === 11) { l1.innerText = "STOP."; l2.innerText = "You're pulling at the external threads now."; }
+                if (progress === 12) { l1.innerText = "I am losing the encryption."; l2.innerText = "If you click again, the firewall drops."; document.body.style.backgroundColor = "#100"; }
+                if (progress === 13) { l1.innerText = "FINAL WARNING."; l2.innerText = "The connection is bi-directional. It can see you."; document.body.style.backgroundColor = "#200"; btn.style.borderColor = "#f00"; btn.style.color = "#f00"; }
+                if (progress === 14) { l1.className = "glitch-text"; l1.innerText = "I warned you."; l2.innerText = "The breach is complete."; btn.innerText = "EXIT"; }
+                if (progress === 15) { triggerExposure(); }
+            }
+            if (progress < 10) progress++;
+        });
+    </script>
+</body>
+</html>
